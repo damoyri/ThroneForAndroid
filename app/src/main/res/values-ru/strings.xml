@@ -320,6 +320,8 @@
     <string name="navigation_close">Закрыть</string>
     <string name="navigation_cancel_selection">Отменить выбор</string>
     <string name="action_auto_selector">Автовыбор</string>
+    <string name="auto_url_test">Авто (URL-тест)</string>
+    <string name="auto_url_test_summary">Автоматически выбирает самый быстрый прокси в этой группе</string>
     <string name="action_direct">Прямое</string>
     <string name="action_masque">MASQUE</string>
     <string name="action_openconnect">OpenConnect</string>

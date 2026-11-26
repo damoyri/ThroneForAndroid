@@ -275,7 +275,8 @@ internal class ProfileRowHolder(view: View, private val adapter: ProfileListAdap
         private set
 
     /** The bound profile, null while [placeholder] or before the first bind. */
-    val boundProfile: ProxyEntity? get() = if (placeholder || !::profile.isInitialized) null else profile
+    val boundProfile: ProxyEntity? get() =
+        if (placeholder || itemId == ProfileListAdapter.AUTO_ROW_ID || !::profile.isInitialized) null else profile
 
     /** [profile]'s texts are bound, so a state change alone rebinds only the state; false after a recycle. */
     var contentBound = false
@@ -287,11 +288,20 @@ internal class ProfileRowHolder(view: View, private val adapter: ProfileListAdap
 
     init {
         view.setOnClickListener {
-            boundProfile?.let { adapter.host?.onRowClick(it) }
+            if (itemId == ProfileListAdapter.AUTO_ROW_ID) {
+                adapter.onAutoRowClick()
+            } else {
+                boundProfile?.let { adapter.host?.onRowClick(it) }
+            }
         }
         view.setOnLongClickListener { v ->
-            val profile = boundProfile
-            profile != null && adapter.host?.onRowLongClick(this, profile, v.isInTouchMode) == true
+            if (itemId == ProfileListAdapter.AUTO_ROW_ID) {
+                adapter.onAutoRowLongClick(v)
+                true
+            } else {
+                val profile = boundProfile
+                profile != null && adapter.host?.onRowLongClick(this, profile, v.isInTouchMode) == true
+            }
         }
         editButton.setOnClickListener {
             boundProfile?.let { adapter.host?.itemMenu?.edit(it, adapter.group) }
@@ -300,7 +310,11 @@ internal class ProfileRowHolder(view: View, private val adapter: ProfileListAdap
             boundProfile?.let { adapter.host?.itemMenu?.showShare(button, it) }
         }
         moreButton.setOnClickListener { button ->
-            boundProfile?.let { adapter.host?.itemMenu?.showMenu(button, it, adapter) }
+            if (itemId == ProfileListAdapter.AUTO_ROW_ID) {
+                adapter.onAutoRowLongClick(button)
+            } else {
+                boundProfile?.let { adapter.host?.itemMenu?.showMenu(button, it, adapter) }
+            }
         }
         val showError = View.OnClickListener {
             val text = boundProfile?.testError
@@ -329,6 +343,53 @@ internal class ProfileRowHolder(view: View, private val adapter: ProfileListAdap
         type.setTextColor(context.getProtocolColor(profile.type))
         bindContent()
         bindState()
+    }
+
+    fun bindAutoRow() {
+        placeholder = false
+        contentBound = true
+        boundTx = Long.MIN_VALUE
+        boundRx = Long.MIN_VALUE
+        val context = itemView.context
+        name.text = context.getString(R.string.auto_url_test)
+        pinIcon.isVisible = false
+        type.text = context.getString(R.string.action_auto_selector)
+        type.setTextColor(context.getColorAttr(R.attr.colorPrimary))
+        address.text = context.getString(R.string.auto_url_test_summary)
+        address.isVisible = true
+        result.text = ""
+        result.contentDescription = null
+        result.isVisible = false
+        result.isClickable = false
+        exitIp.text = ""
+        exitIp.contentDescription = null
+        exitIp.isVisible = false
+        exitIp.isClickable = false
+        testProgress.isVisible = false
+        resultLine?.isVisible = false
+        services.text = ""
+        services.contentDescription = null
+        services.isVisible = false
+        services.isClickable = false
+        traffic.text = ""
+        traffic.contentDescription = null
+        traffic.isVisible = false
+        error.text = ""
+        error.isVisible = false
+        error.isClickable = false
+        bindAutoState()
+    }
+
+    private fun bindAutoState() {
+        val host = adapter.host ?: return
+        val realId = adapter.autoSelectorId()
+        val selected = realId > 0L && host.isSelectedProfile(realId)
+        val selecting = host.selection.active
+        selectCheck.isVisible = false
+        editButton.isVisible = false
+        shareButton.isVisible = false
+        moreButton.isVisible = !selecting && !host.select
+        applyCardColors(selected, checked = false)
     }
 
     /** The address, results, service icons, traffic and error texts. */
@@ -392,6 +453,10 @@ internal class ProfileRowHolder(view: View, private val adapter: ProfileListAdap
     /** Selection, running state, multi-select check and the row buttons. */
     fun bindState() {
         val host = adapter.host ?: return
+        if (itemId == ProfileListAdapter.AUTO_ROW_ID) {
+            bindAutoState()
+            return
+        }
         val id = boundProfile?.id ?: return
         val selecting = host.selection.active
         val buttons = !host.select && !selecting

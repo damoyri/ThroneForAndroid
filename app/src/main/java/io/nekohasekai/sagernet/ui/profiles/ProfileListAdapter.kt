@@ -23,6 +23,8 @@ import io.nekohasekai.sagernet.database.SettingsRegistry
 import io.nekohasekai.sagernet.database.preference.OnPreferenceDataStoreChangeListener
 import io.nekohasekai.sagernet.ktx.Logs
 import io.nekohasekai.sagernet.ktx.runOnDefaultDispatcher
+import io.nekohasekai.sagernet.outbound.types.AutoSelector
+import io.nekohasekai.sagernet.ui.AutoSelectorStatusActivity
 import io.nekohasekai.sagernet.ui.ConfigurationFragment
 import io.nekohasekai.sagernet.ui.test.RowPhase
 import io.nekohasekai.sagernet.ui.test.ServiceResults
@@ -74,7 +76,24 @@ internal class ProfileListAdapter(private val fragment: ProfileListFragment) :
         private const val LOAD_BATCH = 200
 
         private const val AUTO_SELECTOR = "autoselector"
+
+        const val AUTO_ROW_ID = -1L
     }
+
+    private fun shouldShowAutoRow(): Boolean {
+        val host = host ?: return false
+        if (host.hideAutoSelectors || host.select || host.selection.active || isFiltered) return false
+        var eligible = 0
+        for (id in memberIds) {
+            if (id !in autoSelectors) eligible++
+            if (eligible >= 2) return true
+        }
+        return false
+    }
+
+    fun autoSelectorId(): Long = autoSelectors.firstOrNull() ?: 0L
+
+    fun isAutoRow(id: Long) = id == AUTO_ROW_ID
 
     /**
      * What the filter matches a row against: its [ProxyEntity.searchText] while its type and JSON stay the same, and
@@ -215,6 +234,10 @@ internal class ProfileListAdapter(private val fragment: ProfileListFragment) :
 
     override fun onBindViewHolder(holder: ProfileRowHolder, position: Int, payloads: List<Any>) {
         val id = ids[position]
+        if (id == AUTO_ROW_ID) {
+            holder.bindAutoRow()
+            return
+        }
         val profile = touch(id)
         if (profile == null) {
             // a card still showing this row (it left the cache) keeps it until the fresh one arrives
@@ -464,8 +487,17 @@ internal class ProfileListAdapter(private val fragment: ProfileListFragment) :
     private fun visibleIds(): List<Long> {
         val matches = matches
         val hideAutoSelectors = host?.hideAutoSelectors == true
-        return memberIds.filter { id ->
-            id !in hidden && (!hideAutoSelectors || id !in autoSelectors) && (matches == null || id in matches)
+        val autoRow = shouldShowAutoRow()
+        val rows = memberIds.filter { id ->
+            id !in hidden &&
+                (!hideAutoSelectors || id !in autoSelectors) &&
+                (!autoRow || id !in autoSelectors) &&
+                (matches == null || id in matches)
+        }
+        if (!autoRow) return rows
+        return ArrayList<Long>(rows.size + 1).apply {
+            add(AUTO_ROW_ID)
+            addAll(rows)
         }
     }
 
@@ -616,10 +648,16 @@ internal class ProfileListAdapter(private val fragment: ProfileListFragment) :
 
     /** Selection or running state changed for [changedIds] (null = every row). */
     fun notifyState(changedIds: Collection<Long>?) {
+        val autoVisible = shouldShowAutoRow()
+        if (autoVisible != ids.contains(AUTO_ROW_ID)) {
+            publish(emptySet(), false)
+            return
+        }
         if (changedIds == null) {
             notifyItemRangeChanged(0, ids.size, PAYLOAD_STATE)
         } else {
             changedIds.forEach { notifyId(it, PAYLOAD_STATE) }
+            if (autoVisible) notifyId(AUTO_ROW_ID, PAYLOAD_STATE)
         }
     }
 
@@ -637,6 +675,51 @@ internal class ProfileListAdapter(private val fragment: ProfileListFragment) :
         // :bg stored the result before reporting it: show it now rather than at the next table reload
         val finished = old.keys.filter { it !in phases }
         if (finished.isNotEmpty()) refreshEntities(finished)
+    }
+
+    private var creatingAuto = false
+
+    fun onAutoRowClick() {
+        val host = host ?: return
+        val existing = autoSelectorId()
+        if (existing > 0L) {
+            val profile = cache[existing] ?: ProxyEntity(id = existing, groupId = groupId)
+            host.onRowClick(profile)
+            return
+        }
+        if (creatingAuto) return
+        creatingAuto = true
+        val context = host.context ?: run {
+            creatingAuto = false
+            return
+        }
+        runOnDefaultDispatcher {
+            try {
+                val current = SagerDatabase.proxyDao.getByGroup(groupId).firstOrNull { it.type == AUTO_SELECTOR }
+                val profile = current ?: ProfileManager.createProfile(groupId, AutoSelector().apply {
+                    name = context.getString(R.string.auto_url_test)
+                    gids = arrayListOf(groupId)
+                    testURL = DataStore.testUrl
+                    intervalSec = DataStore.urlTestIntervalSec
+                    toleranceMs = DataStore.urlTestToleranceMs
+                })
+                withContext(Dispatchers.Main) {
+                    host.onRowClick(profile)
+                }
+            } finally {
+                creatingAuto = false
+            }
+        }
+    }
+
+    fun onAutoRowLongClick(anchor: android.view.View) {
+        val host = host ?: return
+        val existing = autoSelectorId()
+        if (existing > 0L) {
+            host.startActivity(AutoSelectorStatusActivity.intent(host.requireContext(), existing))
+            return
+        }
+        onAutoRowClick()
     }
 
     /** Re-reads the loaded ones of [profileIds]; the others are read fresh when they come into view. */

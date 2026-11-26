@@ -260,6 +260,8 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     // testing
     var testUrl by SettingsRegistry.TEST_URL
     var urlTestTimeoutMs by SettingsRegistry.URL_TEST_TIMEOUT_MS
+    var urlTestIntervalSec by SettingsRegistry.URL_TEST_INTERVAL_SEC
+    var urlTestToleranceMs by SettingsRegistry.URL_TEST_TOLERANCE_MS
     var testConcurrent by SettingsRegistry.TEST_CONCURRENT
     var directTestUrl by SettingsRegistry.DIRECT_TEST_URL
     var exitCountryLookup by SettingsRegistry.EXIT_COUNTRY_LOOKUP

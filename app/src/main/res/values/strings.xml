@@ -353,6 +353,8 @@
     <string name="backup_in_progress">Backup is already in progress</string>
     <string name="restore_in_progress">Restore is already in progress</string>
     <string name="connection_test_timeout">Test timeout (ms)</string>
+    <string name="url_test_interval">Health check interval (s)</string>
+    <string name="url_test_tolerance">Tolerance (ms)</string>
     <string name="preview_version_hint">This application is a preview version and may contain many problems. If you do not want to test it, please go to GitHub to download the release version!</string>
     <string name="preview_hint_dont_show_again">Don\'t show again</string>
     <string name="update_dialog_title">New version available</string>
@@ -1435,6 +1437,8 @@
     <!-- auto selector -->
     <!-- Add menu and editor (edit_autoselector.ui / .cpp) -->
     <string name="action_auto_selector">Auto selector</string>
+    <string name="auto_url_test">Auto (URL-Test)</string>
+    <string name="auto_url_test_summary">Automatically selects the fastest proxy in this group</string>
     <string name="autosel_title">Auto selector</string>
     <string name="autosel_group">Profiles from</string>
     <string name="autosel_group_archived">%s (archived)</string>

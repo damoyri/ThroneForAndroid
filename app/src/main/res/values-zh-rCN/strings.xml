@@ -344,7 +344,8 @@
     <string name="navigation_close">关闭</string>
     <string name="navigation_cancel_selection">取消选择</string>
     <string name="action_auto_selector">自动选择</string>
-    <string name="action_direct">直连</string>
+    <string name="auto_url_test">Auto (URL-Test)</string>
+    <string name="auto_url_test_summary">Automatically selects the fastest proxy in this group</string>    <string name="action_direct">直连</string>
     <string name="action_masque">MASQUE</string>
     <string name="action_openconnect">OpenConnect</string>
     <string name="action_openvpn">OpenVPN</string>

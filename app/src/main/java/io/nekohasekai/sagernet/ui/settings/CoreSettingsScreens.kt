@@ -187,6 +187,16 @@ class TestingSettingsFragment : SettingsScreenFragment(R.xml.settings_testing) {
 
     override fun bind() {
         bindUrlTest()
+        gateInt(
+            SettingsRegistry.URL_TEST_INTERVAL_SEC.key,
+            Validation.Rules.int(10, 86400, Empty.Required),
+            reload = false,
+        )
+        gateInt(
+            SettingsRegistry.URL_TEST_TOLERANCE_MS.key,
+            Validation.Rules.int(0, 60000, Empty.Required),
+            reload = false,
+        )
         gateText(
             SettingsRegistry.DIRECT_TEST_URL.key, Validation.Rules.url(SettingChecks.HTTP), reload = false,
             invalid = R.string.speed_test_url_invalid,

@@ -95,7 +95,12 @@ class AutoSelectorSettingsActivity : BindingSettingsActivity<AutoSelector>() {
         IntField("maxRTTms", 0, 60000, R.plurals.autosel_milliseconds, R.string.autosel_no_limit),
     )
 
-    override fun createEntity() = AutoSelector().apply { gids = arrayListOf(DataStore.editingGroup) }
+    override fun createEntity() = AutoSelector().apply {
+        gids = arrayListOf(DataStore.editingGroup)
+        testURL = DataStore.testUrl
+        intervalSec = DataStore.urlTestIntervalSec
+        toleranceMs = DataStore.urlTestToleranceMs
+    }
     override val preferencesResource = R.xml.autoselector_preferences
 
     // Like a chain, a selector is not a sing-box outbound the schema could check, and its JSON holds local ids.
